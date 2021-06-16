@@ -9,12 +9,17 @@ def NodeProb(y, classes):
 		prob.append(y[y == c].shape[0] / y.shape[0])
 	return np.array(prob)
 
-def Gini_Impurity(y, classes):
+def Gini(y, classes):
 	return 1 - np.sum(NodeProb(y,classes)**2)
+
+def Entropy(y,classes):
+	tmp = NodeProb(y, classes)
+	return - np.sum(tmp * np.log2(tmp + np.finfo(float).eps)) #add eps to prevent div by 0 err
 
 def Criterion (name = ''):
 	switcher = {
-		'gini':Gini_Impurity
+		'gini':Gini,
+		'entropy':Entropy
 	}
 	res = switcher.get(name)
 	if res == None:
@@ -154,7 +159,7 @@ if __name__ == '__main__':
 
 	from sklearn.model_selection import train_test_split
 	X_train, X_val, y_train, y_val = train_test_split(x,y, random_state = 44)
-	model = decision_tree(max_depth = 10, min_samples_leaf=2, min_samples_split=2)
+	model = decision_tree(max_depth = 10, min_samples_leaf=2, min_samples_split=2, criterion = 'entropy')
 
 	start = time.time()
 	model.fit(X_train,y_train)
