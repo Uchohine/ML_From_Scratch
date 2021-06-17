@@ -1,10 +1,22 @@
 import numpy as np
 
-import Gini_Impurity
+def NodeProb(y, classes):
+	prob = []
+	for c in classes:
+		prob.append(y[y == c].shape[0] / y.shape[0])
+	return np.array(prob)
+
+def Gini(y, classes):
+	return 1 - np.sum(NodeProb(y,classes)**2)
+
+def Entropy(y,classes):
+	tmp = NodeProb(y, classes)
+	return - np.sum(tmp * np.log2(tmp + np.finfo(float).eps)) #add eps to prevent div by 0 err
 
 def Criterion (name = ''):
 	switcher = {
-		'gini':Gini_Impurity.Gini_Impurity
+		'gini':Gini,
+		'entropy':Entropy
 	}
 	res = switcher.get(name)
 	if res == None:
