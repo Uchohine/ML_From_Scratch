@@ -3,8 +3,17 @@ import numpy as np
 from Criterion import criterion as Criterion
 
 import pandas as pd
-from sklearn.datasets import load_iris
+from sklearn.datasets import load_wine
 import time
+
+
+def NodeProb(y, classes):
+    if y.shape[0] == 0:
+        return np.zeros(len(classes))
+    prob = []
+    for c in classes:
+        prob.append(y[y == c].shape[0] / y.shape[0])
+    return np.array(prob)
 
 
 class Node:
@@ -28,7 +37,7 @@ class Node:
 
 class decision_tree():
     def __init__(self, max_depth=3, min_samples_leaf=2, min_samples_split=2, verbose=False, criterion='gini'):
-        self.criterion = Criterion.Criterion(criterion)
+        self.criterion = Criterion.Set_Criterion(criterion)
         self.max_depth = max_depth
         self.min_samples_leaf = min_samples_leaf
         self.min_samples_split = min_samples_split
@@ -37,7 +46,7 @@ class decision_tree():
         self.Tree = None
 
     def split(self, x, y):
-        last = self.criterion(y, self.classes)
+        last = self.criterion(NodeProb(y, self.classes))
         # mean is always the best split. see linear regression
         mean = np.mean(x, axis=0).tolist()
         arr = x.T.tolist()
@@ -49,7 +58,8 @@ class decision_tree():
             m = mean[i]
             tmp = (a > m)
             left, right = y[tmp == False], y[tmp]
-            loss_left, loss_right = self.criterion(left, self.classes), self.criterion(right, self.classes)
+            loss_left, loss_right = self.criterion(NodeProb(left, self.classes)), self.criterion(
+                NodeProb(right, self.classes))
             Gain = last - (loss_left * left.shape[0] / y.shape[0]) - (loss_right * right.shape[0] / y.shape[0])
             if Gain > bestGain:
                 bestcol, bestthre, bestGain = i, m, Gain
@@ -86,11 +96,11 @@ class decision_tree():
 
         node.left = Node()
         node.left.depth = node.depth + 1
-        node.left.prob = Criterion.NodeProb(y_left, self.classes)
+        node.left.prob = NodeProb(y_left, self.classes)
 
         node.right = Node()
         node.right.depth = node.depth + 1
-        node.right.prob = Criterion.NodeProb(y_right, self.classes)
+        node.right.prob = NodeProb(y_right, self.classes)
 
         self.buildtree(x_right, y_right, node.right)
         self.buildtree(x_left, y_left, node.left)
@@ -110,7 +120,7 @@ class decision_tree():
 
         self.Tree = Node()
         self.Tree.depth = 1
-        self.Tree.prob = Criterion.NodeProb(y, self.classes)
+        self.Tree.prob = NodeProb(y, self.classes)
         self.buildtree(x, y, self.Tree)
 
     def predictSample(self, x, node):
@@ -134,13 +144,13 @@ class decision_tree():
 
 
 if __name__ == '__main__':
-    data = load_iris()
+    data = load_wine()
     x, y, col = data['data'], data['target'], data['feature_names']
 
     from sklearn.model_selection import train_test_split
 
     X_train, X_val, y_train, y_val = train_test_split(x, y, random_state=44)
-    model = decision_tree(max_depth=10, min_samples_leaf=2, min_samples_split=2, criterion='gini')
+    model = decision_tree(max_depth=10, min_samples_leaf=2, min_samples_split=2, criterion='entropy')
 
     start = time.time()
     model.fit(X_train, y_train)

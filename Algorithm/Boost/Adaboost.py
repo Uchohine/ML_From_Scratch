@@ -1,7 +1,7 @@
 import numpy as np
 from Algorithm import util
 
-from sklearn.datasets import load_iris
+from sklearn.datasets import load_wine
 import time
 
 
@@ -52,7 +52,7 @@ class Adaboost():
 
 
 if __name__ == '__main__':
-	data = load_iris()
+	data = load_wine()
 	x, y, col = data['data'], data['target'], data['feature_names']
 
 	from sklearn.model_selection import train_test_split
