@@ -6,11 +6,12 @@ import time
 
 
 class Adaboost():
-	def __init__(self, terminal_iter = 100, classifier = 'decision_tree'):
+	def __init__(self, terminal_iter = 50, classifier = 'decision_tree', **kwargs):
 		self.classifier = classifier
 		self.classifiers = list()
 		self.alpha = list()
 		self.terminal = terminal_iter
+		self.arg = kwargs
 
 	def fit(self, x, y):
 		self.weights = np.ones(x.shape[0]) / x.shape[0]
@@ -19,7 +20,7 @@ class Adaboost():
 			x_train = x[idx]
 			y_train = y[idx]
 
-			model = util.Get_Classifer(self.classifier)
+			model = util.Get_Classifer(self.classifier, **self.arg)
 			model.fit(x_train, y_train)
 			ypred = model.predict(x_train)
 			err = (ypred != y_train)
@@ -58,16 +59,23 @@ if __name__ == '__main__':
 
 	X_train, X_val, y_train, y_val = train_test_split(x, y, random_state=44)
 
-	model = Adaboost()
+	model = Adaboost(max_depth=10)
 
 	start = time.time()
 	model.fit(X_train, y_train)
 	end = time.time()
-	print((end - start) * 100)
+	print('elapsed time : {:.2f}ms'.format((end - start)*1000))
 
 	from sklearn.metrics import accuracy_score
 	y_pred = model.predict(X_val)
-	print(y_pred)
-	print(y_val)
 	print(f'Accuracy for self built model {accuracy_score(y_val, y_pred)}')
 
+	from sklearn.ensemble import AdaBoostClassifier
+
+	model = AdaBoostClassifier(n_estimators=50, random_state=0)
+	start = time.time()
+	model.fit(X_train, y_train)
+	end = time.time()
+	print('elapsed time : {:.2f}ms'.format((end - start)*1000))
+	y_pred = model.predict(X_val)
+	print(f'Accuracy for sklearn Decision Tree {accuracy_score(y_val, y_pred)}')

@@ -1,6 +1,8 @@
 import numpy as np
 
 def NodeProb(y, classes):
+	if y.shape[0] == 0:
+		return np.zeros(len(classes))
 	prob = []
 	for c in classes:
 		prob.append(y[y == c].shape[0] / y.shape[0])

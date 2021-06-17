@@ -61,7 +61,6 @@ class decision_tree():
         return bestcol, bestthre, x_left, x_right, y_left, y_right
 
     def buildtree(self, x, y, node):
-
         if node.depth >= self.max_depth:
             node.is_terminal = True
             return
@@ -141,26 +140,24 @@ if __name__ == '__main__':
     from sklearn.model_selection import train_test_split
 
     X_train, X_val, y_train, y_val = train_test_split(x, y, random_state=44)
-    print(X_train.shape)
     model = decision_tree(max_depth=10, min_samples_leaf=2, min_samples_split=2, criterion='gini')
 
     start = time.time()
     model.fit(X_train, y_train)
     end = time.time()
-    print((end - start) * 100)
+    print('elapsed time : {:.5f}s'.format((end - start)))
 
     from sklearn.metrics import accuracy_score
 
     y_pred = model.predict(X_val)
-    print(y_pred)
     print(f'Accuracy for self built model {accuracy_score(y_val, y_pred)}')
 
     from sklearn.tree import DecisionTreeClassifier
 
-    model = DecisionTreeClassifier(max_depth=10)
+    model = DecisionTreeClassifier(max_depth=3)
     start = time.time()
     model.fit(X_train, y_train)
     end = time.time()
-    print((end - start) * 100)
+    print('elapsed time : {:.5f}s'.format((end - start)))
     y_pred = model.predict(X_val)
     print(f'Accuracy for sklearn Decision Tree {accuracy_score(y_val, y_pred)}')

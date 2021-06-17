@@ -4,14 +4,14 @@ from sklearn.datasets import load_iris
 import time
 
 
-def Get_Classifer(name=''):
+def Get_Classifer(name='', **kwargs):
     switcher = {
         'decision_tree': decision_tree
     }
     res = switcher.get(name)
     if res == None:
         raise Exception('No Criterion Named: "{name}".'.format(name=name));
-    return res()
+    return res(**kwargs)
 
 
 if __name__ == '__main__':
