@@ -1,5 +1,5 @@
 import numpy as np
-from Criterion import criterion as Criterion
+from Criterion import loss
 from Algorithm import util
 
 from sklearn.datasets import load_wine
@@ -8,7 +8,7 @@ import time
 
 class Gradient_Boost():
     def __init__(self, Loss='CrossEntropy', learning_rate=.01, terminal_iter=100, classifier='decision_tree', **kwargs):
-        self.residual = Criterion.Set_Loss(Loss)
+        self.residual = loss.Set_Loss(Loss)
         self.classfier = classifier
         self.classfiers = list()
         self.learning_rate = learning_rate
@@ -16,17 +16,16 @@ class Gradient_Boost():
         self.arg = kwargs
 
     def fit(self, x, y):
-        self.base = np.mean(y)
-        ypred = np.ones(y.shape[0]) * self.base
+        model = util.Get_Classifer(self.classfier, **self.arg)
+        model.fit(x, y)
+        ypred = model.predict(x)
+        self.classfiers.append(model)
         for i in range(self.terminal):
-
-            y_train = list()
-            for i in range(y.shape[0]):
-                y_train.append(self.residual(ypred[i], y[i]))
-            y_train = np.array(y_train)
-            print(np.rint(ypred))
+            y_train = self.residual.backward(y, ypred)
+            print(ypred)
             print(y)
             print(y_train)
+            print('----------------------------------------------------------------------')
 
             model = util.Get_Classifer(self.classfier, **self.arg)
             model.fit(x, y_train)
@@ -35,13 +34,10 @@ class Gradient_Boost():
             self.classfiers.append(model)
 
     def predict(self, x):
-        ypred = np.ones(x.shape[0]) * self.base
-        print(ypred)
-        for i in range(len(self.classfiers)):
-            tmp = self.learning_rate * self.classfiers[i].predict(x)
+        ypred = self.classfiers[0].predict(x).astype(np.float64)
+        for i in range(1, len(self.classfiers)):
             ypred += self.learning_rate * self.classfiers[i].predict(x)
-        print(ypred)
-        return ypred
+        return np.rint(ypred)
 
 
 if __name__ == '__main__':
@@ -52,7 +48,7 @@ if __name__ == '__main__':
 
     X_train, X_val, y_train, y_val = train_test_split(x, y, random_state=44)
 
-    model = Gradient_Boost(max_depth=10)
+    model = Gradient_Boost(max_depth=1)
 
     start = time.time()
     model.fit(X_train, y_train)

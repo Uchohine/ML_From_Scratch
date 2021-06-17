@@ -48,19 +48,6 @@ def Set_Criterion(name=''):
         raise Exception('No Criterion Named: "{name}".'.format(name=name));
     return res
 
-def Set_Loss(name = ''):
-    switcher = {
-        'CrossEntropy': CrossEntropy,
-        'Hinge': Hinge,
-        'Huber': Huber,
-        'KLDivergence': KLDivergence,
-        'L1': L1,
-        'MSE': MSE
-    }
-    res = switcher.get(name)
-    if res == None:
-        raise Exception('No Criterion Named: "{name}".'.format(name=name));
-    return res
 
 if __name__ == '__main__':
     name = 'gini';

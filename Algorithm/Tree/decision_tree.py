@@ -131,6 +131,7 @@ class decision_tree():
             prob = self.predictSample(x, node.right)
         else:
             prob = self.predictSample(x, node.left)
+        print(prob)
         return prob
 
     def predict(self, X):
