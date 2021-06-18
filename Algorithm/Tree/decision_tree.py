@@ -161,8 +161,6 @@ class decision_tree():
             if self.no_grad:
                 if self.type == 'classification':
                     pred = np.argmax(pred)
-                else:
-                    pred = np.rint(pred)
             predictions.append(pred)
         return np.asarray(predictions)
 
@@ -174,7 +172,7 @@ if __name__ == '__main__':
     from sklearn.model_selection import train_test_split
 
     X_train, X_val, y_train, y_val = train_test_split(x, y, random_state=44)
-    model = decision_tree(max_depth=20, min_samples_leaf=2, min_samples_split=2)
+    model = decision_tree(max_depth=3, min_samples_leaf=2, min_samples_split=2)
 
     start = time.time()
     model.fit(X_train, y_train)

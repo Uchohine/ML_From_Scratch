@@ -69,6 +69,7 @@ if __name__ == '__main__':
 
 	from sklearn.metrics import accuracy_score
 	y_pred = model.predict(X_val)
+	print(y_pred)
 	print(f'Accuracy for self built model {accuracy_score(y_val, y_pred)}')
 
 	from sklearn.ensemble import AdaBoostClassifier

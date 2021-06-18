@@ -7,7 +7,7 @@ import time
 
 
 class Gradient_Boost():
-    def __init__(self, Loss='CrossEntropy', learning_rate=1, terminal_iter=100, classifier='decision_tree', **kwargs):
+    def __init__(self, Loss='CrossEntropy', learning_rate=1, terminal_iter=2, classifier='decision_tree', **kwargs):
         self.residual = loss.Set_Loss(Loss)
         self.classfier = classifier
         self.classfiers = list()
@@ -16,20 +16,21 @@ class Gradient_Boost():
         self.arg = kwargs
 
     def fit(self, x, y):
+        y,_ = util.to_one_hot(y)
         model = util.Get_Classifer(self.classfier, **self.arg)
         model.fit(x, y)
         ypred = model.predict(x)
         self.classfiers.append(model)
         for i in range(self.terminal):
             y_train = self.residual.backward(y, ypred)
-            idx = np.where(abs(y - ypred) > 0.1)
-            print(y[idx])
-            print(ypred[idx])
-            print(y_train[idx])
+            idx = 2
+            #print(y[:idx,:])
+            #print(ypred[:idx,:])
+            #print(y_train[:idx,:])
             model = util.Get_Classifer(self.classfier, **self.arg)
             model.fit(x, y_train)
-            print((model.predict(x))[idx])
-            print('-*-----------------------------------------------')
+            #print((self.learning_rate * model.predict(x))[:idx,:])
+            #print('-*-----------------------------------------------')
             ypred += self.learning_rate * model.predict(x)
 
             self.classfiers.append(model)
@@ -38,7 +39,7 @@ class Gradient_Boost():
         ypred = self.classfiers[0].predict(x)
         for i in range(1, len(self.classfiers)):
             ypred += self.learning_rate * self.classfiers[i].predict(x)
-        return np.rint(ypred)
+        return np.argmax(ypred, axis = 1)
 
 
 if __name__ == '__main__':
@@ -49,7 +50,7 @@ if __name__ == '__main__':
 
     X_train, X_val, y_train, y_val = train_test_split(x, y, random_state=44)
 
-    model = Gradient_Boost(max_depth=10, type = 'regression')
+    model = Gradient_Boost(max_depth=3)
 
     start = time.time()
     model.fit(X_train, y_train)
@@ -60,6 +61,16 @@ if __name__ == '__main__':
     from sklearn.metrics import accuracy_score
 
     y_pred = model.predict(X_val)
-    print(y_pred)
-    print(y_val)
     print(f'Accuracy for self built model {accuracy_score(y_val, y_pred)}')
+
+    from sklearn.ensemble import GradientBoostingClassifier
+
+    model = GradientBoostingClassifier()
+    start = time.time()
+    model.fit(X_train, y_train)
+    end = time.time()
+    print('elapsed time : {:.5f}s'.format((end - start)))
+    y_pred = model.predict(X_val)
+    print(f'Accuracy for sklearn Decision Tree {accuracy_score(y_val, y_pred)}')
+
+
