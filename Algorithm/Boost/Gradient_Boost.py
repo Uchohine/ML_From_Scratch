@@ -7,7 +7,7 @@ import time
 
 
 class Gradient_Boost():
-    def __init__(self, Loss='CrossEntropy', learning_rate=1, terminal_iter=2, classifier='decision_tree', **kwargs):
+    def __init__(self, Loss='CrossEntropy', learning_rate=1, terminal_iter=10, classifier='decision_tree', **kwargs):
         self.residual = loss.Set_Loss(Loss)
         self.classfier = classifier
         self.classfiers = list()
@@ -23,14 +23,14 @@ class Gradient_Boost():
         self.classfiers.append(model)
         for i in range(self.terminal):
             y_train = self.residual.backward(y, ypred)
-            idx = 2
-            #print(y[:idx,:])
-            #print(ypred[:idx,:])
-            #print(y_train[:idx,:])
+            idx = np.where(np.argmax(y, axis = 1) - np.argmax(ypred, axis = 1) != 0)
+            print(y[idx])
+            print(ypred[idx])
+            print(y_train[idx])
             model = util.Get_Classifer(self.classfier, **self.arg)
             model.fit(x, y_train)
-            #print((self.learning_rate * model.predict(x))[:idx,:])
-            #print('-*-----------------------------------------------')
+            print((self.learning_rate * model.predict(x))[idx])
+            print('-*-----------------------------------------------')
             ypred += self.learning_rate * model.predict(x)
 
             self.classfiers.append(model)
@@ -56,11 +56,12 @@ if __name__ == '__main__':
     model.fit(X_train, y_train)
     end = time.time()
     print('elapsed time : {:.2f}ms'.format((end - start) * 1000))
-    print(model.learning_rate)
 
     from sklearn.metrics import accuracy_score
 
     y_pred = model.predict(X_val)
+    print(y_pred)
+    print(y_val)
     print(f'Accuracy for self built model {accuracy_score(y_val, y_pred)}')
 
     from sklearn.ensemble import GradientBoostingClassifier

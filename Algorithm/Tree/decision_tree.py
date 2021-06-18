@@ -47,6 +47,7 @@ class decision_tree():
 
     def NodeProb(self, y):
         if self.type == 'classification':
+            #y = np.sum(y, axis=0)
             return np.sum(y, axis=0) / y.shape[0]
         else:
             return np.mean(y[:, -self.classes], axis = 0)
