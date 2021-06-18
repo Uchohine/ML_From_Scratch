@@ -15,10 +15,11 @@ def Get_Classifer(name='', **kwargs):
     return res(**kwargs)
 
 def to_one_hot(x):
+    if len(x.shape) != 1:
+        return x, x.shape[1]
     res = np.zeros((x.size, x.max()+1))
     res[np.arange(x.size), x] = 1
-    return res
-
+    return res, res.shape[1]
 
 if __name__ == '__main__':
     data = load_iris()

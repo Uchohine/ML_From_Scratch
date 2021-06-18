@@ -8,7 +8,6 @@ import time
 
 
 
-
 class Node:
     def __init__(self):
         # links to the left and right child nodes
@@ -29,64 +28,87 @@ class Node:
 
 
 class decision_tree():
-    def __init__(self, max_depth=3, min_samples_leaf=2, min_samples_split=2, verbose=False, criterion='gini'):
-        self.criterion = Criterion.Set_Criterion(criterion)
+    def __init__(self, max_depth=3, min_samples_leaf=2, min_samples_split=2, verbose=False, criterion=None, type = 'classification'):
+        if criterion != None:
+            self.criterion = Criterion.Set_Criterion(criterion)
+        else:
+            if type == 'classification':
+                self.criterion = Criterion.Set_Criterion('gini')
+            else:
+                self.criterion = Criterion.Set_Criterion('MAE')
         self.max_depth = max_depth
         self.min_samples_leaf = min_samples_leaf
         self.min_samples_split = min_samples_split
         self.verbose = verbose
+        self.type = type
 
         self.no_grad = False
         self.Tree = None
 
     def NodeProb(self, y):
-        if y.shape[0] == 0:
-            return np.zeros(len(self.classes))
-        return np.sum(y, axis=0) / np.sum(y)
+        if self.type == 'classification':
+            return np.sum(y, axis=0) / y.shape[0]
+        else:
+            return np.mean(y[:, -self.classes], axis = 0)
 
-    def split(self, x, y):
-        last = self.criterion(self.NodeProb(y))
-        # mean is always the best split. see linear regression
-        mean = np.mean(x, axis=0).tolist()
-        arr = x.T.tolist()
-        bestcol = None
-        bestthre = None
+    def split(self, dataset):
+        if self.type == 'classification':
+            last = self.criterion(self.NodeProb(dataset[:, -self.classes:]))
+        else:
+            last = self.criterion(dataset[:,-self.classes])
+        bestSplit = None
+        bestThre = None
         bestGain = -999
-        for i in range(len(mean)):
-            a = np.array(arr[i])
-            m = mean[i]
-            tmp = (a >= m)
-            left, right = y[tmp == False], y[tmp]
-            loss_left, loss_right = self.criterion(self.NodeProb(left)), self.criterion(
-                self.NodeProb(right))
-            Gain = last - (loss_left * left.shape[0] / y.shape[0]) - (loss_right * right.shape[0] / y.shape[0])
-            if Gain > bestGain:
-                bestcol, bestthre, bestGain = i, m, Gain
+        for i in range(dataset.shape[1] - self.classes):
+            cur = dataset[:, i]
+            for val in cur:
+                dataset_right = dataset[cur > val]
+                dataset_left = dataset[cur <= val]
+                if dataset_left.shape[0] == 0 or dataset_right.shape[0] == 0:
+                    continue
+                if self.type == 'classification':
+                    loss_right = self.criterion(self.NodeProb(dataset_right[:,-self.classes:]))
+                    loss_left = self.criterion(self.NodeProb(dataset_left[:,-self.classes:]))
+                    gain = last - (loss_left * dataset_left.shape[0] / dataset.shape[0]) - (
+                                loss_right * dataset_right.shape[0] / dataset.shape[0])
+                else:
+                    gain = last - (self.criterion(dataset_left[:, -self.classes:]) * dataset_left.shape[
+                        0] + self.criterion(dataset_right[:, -self.classes:]) *
+                                   dataset_right.shape[0]) / dataset.shape[0]
+                if gain > bestGain:
+                    bestSplit = i
+                    bestThre = val
+                    bestGain = gain
         if bestGain == -999:
-            return None, None, None, None, None, None
-        x_col = x[:, bestcol]
-        x_left, x_right = x[x_col <= bestthre, :], x[x_col > bestthre, :]
-        y_left, y_right = y[x_col <= bestthre], y[x_col > bestthre]
-        return bestcol, bestthre, x_left, x_right, y_left, y_right
+            return None, None, None, None
 
-    def buildtree(self, x, y, node):
+        idx = dataset[:, bestSplit]
+        dataset_left, dataset_right = dataset[idx <= bestThre, :], dataset[idx > bestThre, :]
+        return bestSplit,bestThre,dataset_left,dataset_right
+
+
+    def buildtree(self, dataset, node):
         if node.depth >= self.max_depth:
             node.is_terminal = True
             return
-        if x.shape[0] < self.min_samples_split:
+        if dataset.shape[0] < self.min_samples_split:
             node.is_terminal = True
             return
-        if np.unique(y).shape[0] == 1:
+        if np.unique(np.argmax(dataset[:,-self.classes:], axis = 0)).shape[0] == 1 and self.type == 'classification':
             node.is_terminal = True
             return
 
-        splitidx, thre, x_left, x_right, y_left, y_right = self.split(x, y)
+        if np.unique(dataset[:,-self.classes:]).shape[0] == 1 and self.type != 'classification':
+            node.is_terminal = True
+            return
+
+        splitidx, thre, dataset_left, dataset_right = self.split(dataset)
 
         if splitidx is None:
             node.is_terminal = True
             return
 
-        if x_left.shape[0] < self.min_samples_leaf or x_right.shape[0] < self.min_samples_leaf:
+        if dataset_left.shape[0] < self.min_samples_leaf or dataset_right.shape[0] < self.min_samples_leaf:
             node.is_terminal = True
             return
 
@@ -95,33 +117,30 @@ class decision_tree():
 
         node.left = Node()
         node.left.depth = node.depth + 1
-        node.left.prob = self.NodeProb(y_left)
+        node.left.prob = self.NodeProb(dataset_left[:,-self.classes:])
 
         node.right = Node()
         node.right.depth = node.depth + 1
-        node.right.prob = self.NodeProb(y_right)
+        node.right.prob = self.NodeProb(dataset_right[:, -self.classes:])
 
-        self.buildtree(x_right, y_right, node.right)
-        self.buildtree(x_left, y_left, node.left)
+        self.buildtree(dataset_right, node.right)
+        self.buildtree(dataset_left, node.left)
 
     def fit(self, x, y):
-        if type(y) == np.ndarray:
-            self.classes = list(np.unique(y))
-        elif type(y) == pd.DataFrame:
-            self.classes = list(np.unique(np.array(y)))
-        elif type(y) == list:
-            self.classes = list(set(y))
-        else:
-            raise TypeError("Unirecognize Data Type")
-
         if type(x) == pd.DataFrame:
             x = np.array(x)
 
-        y = util.to_one_hot(y)
+        if self.type == 'classification':
+            y, self.classes = util.to_one_hot(y)
+            dataset = np.hstack((x, y))
+        else:
+            self.classes = 1
+            dataset = np.hstack((x, np.split(y, y.shape[0])))
+
         self.Tree = Node()
         self.Tree.depth = 1
-        self.Tree.prob = self.NodeProb(y)
-        self.buildtree(x, y, self.Tree)
+        self.Tree.prob = self.NodeProb(dataset[:,-self.classes:])
+        self.buildtree(dataset, self.Tree)
 
     def predictSample(self, x, node):
         if node.is_terminal:
@@ -140,7 +159,10 @@ class decision_tree():
         for x in X:
             pred = self.predictSample(x, self.Tree)
             if self.no_grad:
-                pred = np.argmax(pred)
+                if self.type == 'classification':
+                    pred = np.argmax(pred)
+                else:
+                    pred = np.rint(pred)
             predictions.append(pred)
         return np.asarray(predictions)
 
@@ -152,7 +174,7 @@ if __name__ == '__main__':
     from sklearn.model_selection import train_test_split
 
     X_train, X_val, y_train, y_val = train_test_split(x, y, random_state=44)
-    model = decision_tree(max_depth=10, min_samples_leaf=2, min_samples_split=2, criterion='entropy')
+    model = decision_tree(max_depth=20, min_samples_leaf=2, min_samples_split=2)
 
     start = time.time()
     model.fit(X_train, y_train)
@@ -163,6 +185,7 @@ if __name__ == '__main__':
 
     model.no_grad = True
     y_pred = model.predict(X_val)
+    print(y_val)
     print(f'Accuracy for self built model {accuracy_score(y_val, y_pred)}')
 
     from sklearn.tree import DecisionTreeClassifier

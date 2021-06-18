@@ -7,7 +7,7 @@ import time
 
 
 class Gradient_Boost():
-    def __init__(self, Loss='CrossEntropy', learning_rate=.01, terminal_iter=100, classifier='decision_tree', **kwargs):
+    def __init__(self, Loss='CrossEntropy', learning_rate=1, terminal_iter=100, classifier='decision_tree', **kwargs):
         self.residual = loss.Set_Loss(Loss)
         self.classfier = classifier
         self.classfiers = list()
@@ -22,19 +22,20 @@ class Gradient_Boost():
         self.classfiers.append(model)
         for i in range(self.terminal):
             y_train = self.residual.backward(y, ypred)
-            print(ypred)
-            print(y)
-            print(y_train)
-            print('----------------------------------------------------------------------')
-
+            idx = np.where(abs(y - ypred) > 0.1)
+            print(y[idx])
+            print(ypred[idx])
+            print(y_train[idx])
             model = util.Get_Classifer(self.classfier, **self.arg)
             model.fit(x, y_train)
-            ypred = ypred + self.learning_rate * model.predict(x)
+            print((model.predict(x))[idx])
+            print('-*-----------------------------------------------')
+            ypred += self.learning_rate * model.predict(x)
 
             self.classfiers.append(model)
 
     def predict(self, x):
-        ypred = self.classfiers[0].predict(x).astype(np.float64)
+        ypred = self.classfiers[0].predict(x)
         for i in range(1, len(self.classfiers)):
             ypred += self.learning_rate * self.classfiers[i].predict(x)
         return np.rint(ypred)
@@ -48,7 +49,7 @@ if __name__ == '__main__':
 
     X_train, X_val, y_train, y_val = train_test_split(x, y, random_state=44)
 
-    model = Gradient_Boost(max_depth=1)
+    model = Gradient_Boost(max_depth=10, type = 'regression')
 
     start = time.time()
     model.fit(X_train, y_train)
@@ -59,4 +60,6 @@ if __name__ == '__main__':
     from sklearn.metrics import accuracy_score
 
     y_pred = model.predict(X_val)
+    print(y_pred)
+    print(y_val)
     print(f'Accuracy for self built model {accuracy_score(y_val, y_pred)}')

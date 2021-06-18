@@ -34,14 +34,14 @@ def L1(yHat, y):
     return np.sum(np.absolute(yHat - y)) / y.size
 
 
-def MSE(yHat, y):
-    return (yHat - y) ** 2
-
+def MAE(x):
+    return np.mean(abs(x - np.mean(x, axis = 0)), axis = 0)
 
 def Set_Criterion(name=''):
     switcher = {
         'gini': Gini,
-        'entropy': Entropy
+        'entropy': Entropy,
+        'MAE':MAE
     }
     res = switcher.get(name)
     if res == None:
