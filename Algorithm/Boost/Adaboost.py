@@ -21,6 +21,7 @@ class Adaboost():
 			y_train = y[idx]
 
 			model = util.Get_Classifer(self.classifier, **self.arg)
+			model.no_grad = True
 			model.fit(x_train, y_train)
 			ypred = model.predict(x_train)
 			err = (ypred != y_train)

@@ -1,19 +1,12 @@
 import numpy as np
-
 from Criterion import criterion as Criterion
+from Algorithm import util
 
 import pandas as pd
 from sklearn.datasets import load_wine
 import time
 
 
-def NodeProb(y, classes):
-    if y.shape[0] == 0:
-        return np.zeros(len(classes))
-    prob = []
-    for c in classes:
-        prob.append(y[y == c].shape[0] / y.shape[0])
-    return np.array(prob)
 
 
 class Node:
@@ -43,10 +36,16 @@ class decision_tree():
         self.min_samples_split = min_samples_split
         self.verbose = verbose
 
+        self.no_grad = False
         self.Tree = None
 
+    def NodeProb(self, y):
+        if y.shape[0] == 0:
+            return np.zeros(len(self.classes))
+        return np.sum(y, axis=0) / np.sum(y)
+
     def split(self, x, y):
-        last = self.criterion(NodeProb(y, self.classes))
+        last = self.criterion(self.NodeProb(y))
         # mean is always the best split. see linear regression
         mean = np.mean(x, axis=0).tolist()
         arr = x.T.tolist()
@@ -56,10 +55,10 @@ class decision_tree():
         for i in range(len(mean)):
             a = np.array(arr[i])
             m = mean[i]
-            tmp = (a > m)
+            tmp = (a >= m)
             left, right = y[tmp == False], y[tmp]
-            loss_left, loss_right = self.criterion(NodeProb(left, self.classes)), self.criterion(
-                NodeProb(right, self.classes))
+            loss_left, loss_right = self.criterion(self.NodeProb(left)), self.criterion(
+                self.NodeProb(right))
             Gain = last - (loss_left * left.shape[0] / y.shape[0]) - (loss_right * right.shape[0] / y.shape[0])
             if Gain > bestGain:
                 bestcol, bestthre, bestGain = i, m, Gain
@@ -96,11 +95,11 @@ class decision_tree():
 
         node.left = Node()
         node.left.depth = node.depth + 1
-        node.left.prob = NodeProb(y_left, self.classes)
+        node.left.prob = self.NodeProb(y_left)
 
         node.right = Node()
         node.right.depth = node.depth + 1
-        node.right.prob = NodeProb(y_right, self.classes)
+        node.right.prob = self.NodeProb(y_right)
 
         self.buildtree(x_right, y_right, node.right)
         self.buildtree(x_left, y_left, node.left)
@@ -118,9 +117,10 @@ class decision_tree():
         if type(x) == pd.DataFrame:
             x = np.array(x)
 
+        y = util.to_one_hot(y)
         self.Tree = Node()
         self.Tree.depth = 1
-        self.Tree.prob = NodeProb(y, self.classes)
+        self.Tree.prob = self.NodeProb(y)
         self.buildtree(x, y, self.Tree)
 
     def predictSample(self, x, node):
@@ -131,7 +131,6 @@ class decision_tree():
             prob = self.predictSample(x, node.right)
         else:
             prob = self.predictSample(x, node.left)
-        print(prob)
         return prob
 
     def predict(self, X):
@@ -139,7 +138,9 @@ class decision_tree():
             X = np.asarray(X)
         predictions = []
         for x in X:
-            pred = np.argmax(self.predictSample(x, self.Tree))
+            pred = self.predictSample(x, self.Tree)
+            if self.no_grad:
+                pred = np.argmax(pred)
             predictions.append(pred)
         return np.asarray(predictions)
 
@@ -160,6 +161,7 @@ if __name__ == '__main__':
 
     from sklearn.metrics import accuracy_score
 
+    model.no_grad = True
     y_pred = model.predict(X_val)
     print(f'Accuracy for self built model {accuracy_score(y_val, y_pred)}')
 

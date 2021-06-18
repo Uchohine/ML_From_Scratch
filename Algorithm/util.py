@@ -1,4 +1,5 @@
 from Algorithm.Tree.decision_tree import decision_tree
+import numpy as np
 
 from sklearn.datasets import load_iris
 import time
@@ -12,6 +13,11 @@ def Get_Classifer(name='', **kwargs):
     if res == None:
         raise Exception('No Criterion Named: "{name}".'.format(name=name));
     return res(**kwargs)
+
+def to_one_hot(x):
+    res = np.zeros((x.size, x.max()+1))
+    res[np.arange(x.size), x] = 1
+    return res
 
 
 if __name__ == '__main__':
