@@ -9,8 +9,9 @@ class CrossEntropy():
         return - y * np.log2(ypred + np.finfo(float).eps)
 
     def backward(self, y, ypred):
-        tmp = np.exp(ypred - np.amax(ypred, axis = 0))
-        return y - ypred#tmp / np.sum(tmp, axis = 0)
+        tmp = np.exp(ypred.T - np.amax(ypred, axis = 1))
+        tmp = (tmp / np.sum(tmp, axis=0)).T
+        return y - tmp
 
 
 def Set_Loss(name='', **kwargs):

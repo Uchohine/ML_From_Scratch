@@ -7,7 +7,7 @@ import time
 
 
 class Gradient_Boost():
-    def __init__(self, Loss='CrossEntropy', learning_rate=1, terminal_iter=10, classifier='decision_tree', **kwargs):
+    def __init__(self, Loss='CrossEntropy', learning_rate=1, terminal_iter=20, classifier='decision_tree', **kwargs):
         self.residual = loss.Set_Loss(Loss)
         self.classfier = classifier
         self.classfiers = list()

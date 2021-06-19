@@ -47,8 +47,9 @@ class decision_tree():
 
     def NodeProb(self, y):
         if self.type == 'classification':
-            #y = np.sum(y, axis=0)
-            return np.sum(y, axis=0) / y.shape[0]
+            tmp = np.exp(y.T - np.amax(y, axis=1))
+            tmp = (tmp / np.sum(tmp, axis= 0)).T
+            return np.sum(tmp, axis=0) / y.shape[0]
         else:
             return np.mean(y[:, -self.classes], axis = 0)
 
@@ -173,7 +174,7 @@ if __name__ == '__main__':
     from sklearn.model_selection import train_test_split
 
     X_train, X_val, y_train, y_val = train_test_split(x, y, random_state=44)
-    model = decision_tree(max_depth=3, min_samples_leaf=2, min_samples_split=2)
+    model = decision_tree(max_depth=10, min_samples_leaf=2, min_samples_split=2)
 
     start = time.time()
     model.fit(X_train, y_train)
