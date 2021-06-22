@@ -47,7 +47,8 @@ class Deviance():
 def Set_Loss(name='', **kwargs):
     switcher = {
         'CrossEntropy': CrossEntropy,
-        'Deviance': Deviance
+        'Deviance': Deviance,
+        'MSE':MSE
     }
     res = switcher.get(name)
     if res == None:
