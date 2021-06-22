@@ -8,13 +8,13 @@ from sklearn.datasets import load_wine
 import time
 
 class XGTree():
-    def __init__(self, max_depth=3, min_samples_leaf=2, min_samples_split=2, lbda=0, gamma=0, T=0,  use_appro=False):
+    def __init__(self, max_depth=3, min_samples_leaf=2, min_samples_split=2, lbda=0, gamma=0, T=0, eta = 1):
         self.max_depth = max_depth
         self.min_samples_leaf = min_samples_leaf
         self.min_samples_split = min_samples_split
         self.lbda = lbda
-        self.use_appro = use_appro
         self.gamma = gamma
+        self.eta = eta
         self.T = T
         self.leaves = 0
 
@@ -24,20 +24,25 @@ class XGTree():
         return np.sum(g, axis=0) / (np.sum(h, axis=0) + self.lbda + np.finfo(float).eps)
 
     def Score(self, g, h):
-        return 0.5 * (np.sum(g) ** 2 / (np.sum(h) + self.lbda + np.finfo(float).eps)) + self.gamma * self.T
+        return 0.5 * (np.sum(g) ** 2 / (np.sum(h) + self.lbda + np.finfo(float).eps)) - self.gamma * self.T
 
     def split(self, x, g, h):
         last = self.Score(g, h)
         bestSplit = None
         bestThre = None
         bestGain = -999
-        if self.use_appro:
-            candidate = list()
-        else:
-            candidate = x
-        for i in range(candidate.shape[1]):
+        for i in range(x.shape[1]):
             cur = x[:,i]
-            can = candidate[:,i]
+            if self.eta != 1:
+                skip = (int)(1 // self.eta)
+                idx = np.argsort(cur).tolist()
+                can = list()
+                j = 0
+                while j < len(cur):
+                    can.append(cur[idx[j]])
+                    j += skip
+            else:
+                can = cur
             for val in can:
                 left = (cur <= val)
                 right = (cur > val)
@@ -63,7 +68,7 @@ class XGTree():
             node.is_terminal = True
             return
 
-        if x.shape[0] < self.min_samples_split:
+        if x.shape[0] < self.min_samples_split or x.shape[0] < (int)(1 // self.eta):
             node.is_terminal = True
             return
 
@@ -131,13 +136,6 @@ class XGBoost():
         h = self.loss.Hessian(y,ypred)
 
         for i in range(self.terminal_iter):
-            idx = np.where(np.argmax(y,axis=1) - np.argmax(ypred,axis=1) != 0)
-            print(idx)
-            print(y[127,:])
-            print(ypred[127,:])
-            print(g[127,:])
-            print(h[127,:])
-            print('---------------------------------------------------')
             model = XGTree(**self.arg)
             T = model.fit(x, g, h)
             ypred -= self.learning_rate * model.predict(x)
@@ -164,7 +162,7 @@ if __name__ == '__main__':
 
     X_train, X_val, y_train, y_val = train_test_split(x, y, random_state=44)
 
-    model = XGBoost(max_depth=3)
+    model = XGBoost(max_depth=3, lbda = 0.01, eta = 0.08)
 
     start = time.time()
     model.fit(X_train, y_train)

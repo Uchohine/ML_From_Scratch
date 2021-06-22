@@ -29,7 +29,7 @@ class Node:
 
 
 class decision_tree():
-    def __init__(self, max_depth=3, min_samples_leaf=2, min_samples_split=2, verbose=False, criterion=None, type = 'classification'):
+    def __init__(self, max_depth=3, min_samples_leaf=2, min_samples_split=2, verbose=False, eta = .08, criterion=None, type = 'classification'):
         if criterion != None:
             self.criterion = Criterion.Set_Criterion(criterion)
         else:
@@ -40,6 +40,7 @@ class decision_tree():
         self.max_depth = max_depth
         self.min_samples_leaf = min_samples_leaf
         self.min_samples_split = min_samples_split
+        self.eta = eta
         self.verbose = verbose
         self.type = type
 
@@ -62,24 +63,34 @@ class decision_tree():
         bestGain = -999
         for i in range(dataset.shape[1] - self.classes):
             cur = dataset[:, i]
-            val = np.mean(cur)
-            dataset_right = dataset[cur > val]
-            dataset_left = dataset[cur <= val]
-            if dataset_left.shape[0] == 0 or dataset_right.shape[0] == 0:
-                continue
-            if self.type == 'classification':
-                loss_right = self.criterion(self.NodeProb(dataset_right[:,-self.classes:]))
-                loss_left = self.criterion(self.NodeProb(dataset_left[:,-self.classes:]))
-                gain = last - (loss_left * dataset_left.shape[0] / dataset.shape[0]) - (
-                        loss_right * dataset_right.shape[0] / dataset.shape[0])
+            if self.eta != 1:
+                skip = (int)(1 // self.eta)
+                idx = np.argsort(cur).tolist()
+                can = list()
+                j = 0
+                while j < len(cur):
+                    can.append(cur[idx[j]])
+                    j += skip
             else:
-                gain = last - (self.criterion(dataset_left[:, -self.classes:]) * dataset_left.shape[
-                    0] + self.criterion(dataset_right[:, -self.classes:]) *
-                               dataset_right.shape[0]) / dataset.shape[0]
-            if gain > bestGain:
-                bestSplit = i
-                bestThre = val
-                bestGain = gain
+                can = cur
+            for val in can:
+                dataset_right = dataset[cur > val]
+                dataset_left = dataset[cur <= val]
+                if dataset_left.shape[0] == 0 or dataset_right.shape[0] == 0:
+                    continue
+                if self.type == 'classification':
+                    loss_right = self.criterion(self.NodeProb(dataset_right[:, -self.classes:]))
+                    loss_left = self.criterion(self.NodeProb(dataset_left[:, -self.classes:]))
+                    gain = last - (loss_left * dataset_left.shape[0] / dataset.shape[0]) - (
+                            loss_right * dataset_right.shape[0] / dataset.shape[0])
+                else:
+                    gain = last - (self.criterion(dataset_left[:, -self.classes:]) * dataset_left.shape[
+                        0] + self.criterion(dataset_right[:, -self.classes:]) *
+                                   dataset_right.shape[0]) / dataset.shape[0]
+                if gain > bestGain:
+                    bestSplit = i
+                    bestThre = val
+                    bestGain = gain
         if bestGain == -999:
             return None, None, None, None
 
@@ -92,7 +103,7 @@ class decision_tree():
         if node.depth >= self.max_depth:
             node.is_terminal = True
             return
-        if dataset.shape[0] < self.min_samples_split:
+        if dataset.shape[0] < self.min_samples_split or dataset.shape[0] < (int)(1 // self.eta):
             node.is_terminal = True
             return
         if np.unique(np.argmax(dataset[:,-self.classes:], axis = 0)).shape[0] == 1 and self.type == 'classification':
