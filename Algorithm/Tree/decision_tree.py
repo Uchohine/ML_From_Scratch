@@ -1,5 +1,6 @@
 import numpy as np
 from Criterion import criterion as Criterion
+from Criterion.loss import softmax
 from Algorithm import util
 
 import pandas as pd
@@ -47,9 +48,7 @@ class decision_tree():
 
     def NodeProb(self, y):
         if self.type == 'classification':
-            tmp = np.exp(y.T - np.amax(y, axis=1))
-            tmp = (tmp / np.sum(tmp, axis= 0)).T
-            return np.sum(tmp, axis=0) / y.shape[0]
+            return np.sum(softmax(y), axis=0) / y.shape[0]
         else:
             return np.mean(y[:, -self.classes], axis = 0)
 
@@ -63,24 +62,24 @@ class decision_tree():
         bestGain = -999
         for i in range(dataset.shape[1] - self.classes):
             cur = dataset[:, i]
-            for val in cur:
-                dataset_right = dataset[cur > val]
-                dataset_left = dataset[cur <= val]
-                if dataset_left.shape[0] == 0 or dataset_right.shape[0] == 0:
-                    continue
-                if self.type == 'classification':
-                    loss_right = self.criterion(self.NodeProb(dataset_right[:,-self.classes:]))
-                    loss_left = self.criterion(self.NodeProb(dataset_left[:,-self.classes:]))
-                    gain = last - (loss_left * dataset_left.shape[0] / dataset.shape[0]) - (
-                                loss_right * dataset_right.shape[0] / dataset.shape[0])
-                else:
-                    gain = last - (self.criterion(dataset_left[:, -self.classes:]) * dataset_left.shape[
-                        0] + self.criterion(dataset_right[:, -self.classes:]) *
-                                   dataset_right.shape[0]) / dataset.shape[0]
-                if gain > bestGain:
-                    bestSplit = i
-                    bestThre = val
-                    bestGain = gain
+            val = np.mean(cur)
+            dataset_right = dataset[cur > val]
+            dataset_left = dataset[cur <= val]
+            if dataset_left.shape[0] == 0 or dataset_right.shape[0] == 0:
+                continue
+            if self.type == 'classification':
+                loss_right = self.criterion(self.NodeProb(dataset_right[:,-self.classes:]))
+                loss_left = self.criterion(self.NodeProb(dataset_left[:,-self.classes:]))
+                gain = last - (loss_left * dataset_left.shape[0] / dataset.shape[0]) - (
+                        loss_right * dataset_right.shape[0] / dataset.shape[0])
+            else:
+                gain = last - (self.criterion(dataset_left[:, -self.classes:]) * dataset_left.shape[
+                    0] + self.criterion(dataset_right[:, -self.classes:]) *
+                               dataset_right.shape[0]) / dataset.shape[0]
+            if gain > bestGain:
+                bestSplit = i
+                bestThre = val
+                bestGain = gain
         if bestGain == -999:
             return None, None, None, None
 
@@ -174,7 +173,7 @@ if __name__ == '__main__':
     from sklearn.model_selection import train_test_split
 
     X_train, X_val, y_train, y_val = train_test_split(x, y, random_state=44)
-    model = decision_tree(max_depth=10, min_samples_leaf=2, min_samples_split=2)
+    model = decision_tree(max_depth=20, min_samples_leaf=2, min_samples_split=2)
 
     start = time.time()
     model.fit(X_train, y_train)

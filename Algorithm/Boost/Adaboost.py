@@ -6,7 +6,7 @@ import time
 
 
 class Adaboost():
-	def __init__(self, terminal_iter = 50, classifier = 'decision_tree', **kwargs):
+	def __init__(self, terminal_iter = 10, classifier = 'decision_tree', **kwargs):
 		self.classifier = classifier
 		self.classifiers = list()
 		self.alpha = list()
@@ -27,10 +27,10 @@ class Adaboost():
 			err = (ypred != y_train)
 
 			epi = np.matmul(self.weights.T, err)
-			if epi == .5 or epi == 0:
+			if epi == .5:
 				break
 
-			alpha = .5 * np.log((1/epi) - 1)
+			alpha = .5 * np.log((1/(epi + np.finfo(float).eps)) - 1)
 			self.alpha.append(alpha)
 			self.classifiers.append(model)
 
