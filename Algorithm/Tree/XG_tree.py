@@ -20,40 +20,74 @@ class XGTree():
     def Score(self, g, h):
         return 0.5 * (np.sum(g) ** 2 / (np.sum(h) + self.lbda + np.finfo(float).eps))
 
+    def Weighted_Quantile_Sketch(self, pos, weight):
+        idx = np.argsort(pos)
+        pos = pos[idx]
+        weight = weight[idx]
+        skip = np.sum(weight) * self.eta
+        candidate = list()
+        err = 0
+        for i in range(weight.shape[0]):
+            err += np.sum(weight[i, :])
+            if err >= skip:
+                candidate.append(pos[i])
+                err = 0
+        return candidate
+
+    def Sparse_Separate(self, x, g, h):
+        is_nan = np.isnan(x)
+        not_nan = ~is_nan
+        valid_cur = x[not_nan]
+        valid_g = g[not_nan]
+        valid_h = h[not_nan]
+        nan_g = g[is_nan]
+        nan_h = h[is_nan]
+        return valid_cur, valid_g, valid_h, nan_g, nan_h
+
     def split(self, x, g, h):
         last = self.Score(g, h)
         bestSplit = None
         bestThre = None
-        bestGain = -999
+        bestGain = 0
+        direction = None
         for i in range(x.shape[1]):
             cur = x[:, i]
-            if self.eta != 1:
-                skip = (int)(1 // self.eta)
-                idx = np.argsort(cur).tolist()
-                can = list()
-                j = 0
-                while j < len(cur):
-                    can.append(cur[idx[j]])
-                    j += skip
+            valid_cur, valid_g, valid_h, nan_g, nan_h = self.Sparse_Separate(cur, g, h)
+            if self.eta < 1:
+                can = self.Weighted_Quantile_Sketch(valid_cur, valid_h)
             else:
-                can = cur
+                can = valid_cur
             for val in can:
-                left = (cur <= val)
-                right = (cur > val)
-                score = self.Score(g[left], h[left]) + self.Score(g[right], h[right]) - last
+                left = (valid_cur <= val)
+                right = (valid_cur > val)
+                if nan_g.shape[0] != 0:
+                    score = .5 * (self.Score(np.concatenate((valid_g[left], nan_g)),
+                                             np.concatenate((valid_h[left], nan_h))) + self.Score(g[right],
+                                                                                                  h[
+                                                                                                      right]) - last) - self.gamma
+                    if score > bestGain:
+                        bestSplit = i
+                        bestThre = val
+                        bestGain = score
+                        direction = 0
+                score = .5 * (self.Score(valid_g[left], valid_h[left]) + self.Score(np.concatenate((valid_g[right], nan_g)),
+                                                                                    np.concatenate((valid_h[right],
+                                                                                               nan_h))) - last) - self.gamma
                 if score > bestGain:
                     bestSplit = i
                     bestThre = val
                     bestGain = score
-        if bestGain == -999:
-            return None, None, None, None, None, None, None, None
+                    direction = 1
+
+        if bestGain == 0:
+            return None, None, None, None, None, None, None, None, None
 
         idx = x[:, bestSplit]
         x_left, x_right = x[idx <= bestThre, :], x[idx > bestThre, :]
         g_left, g_right = g[idx <= bestThre, :], g[idx > bestThre, :]
         h_left, h_right = h[idx <= bestThre, :], h[idx > bestThre, :]
 
-        return bestSplit, bestThre, x_left, x_right, g_left, g_right, h_left, h_right
+        return bestSplit, bestThre, direction, x_left, x_right, g_left, g_right, h_left, h_right
 
     def buildtree(self, x, g, h, node):
         if node.depth >= self.max_depth:
@@ -66,7 +100,7 @@ class XGTree():
             self.leaves += 1
             return
 
-        bestSplit, bestThre, x_left, x_right, g_left, g_right, h_left, h_right = self.split(x, g, h)
+        bestSplit, bestThre, direction, x_left, x_right, g_left, g_right, h_left, h_right = self.split(x, g, h)
 
         if bestSplit is None:
             node.is_terminal = True
@@ -80,6 +114,7 @@ class XGTree():
 
         node.column = bestSplit
         node.threshold = bestThre
+        node.direct = direction
 
         node.left = Node()
         node.left.depth = node.depth + 1
@@ -103,7 +138,12 @@ class XGTree():
         if node.is_terminal:
             return node.prob
 
-        if x[node.column] > node.threshold:
+        if np.isnan(x[node.column]):
+            if node.direct:
+                prob = self.predictSample(x, node.right)
+            else:
+                prob = self.predictSample(x, node.left)
+        elif x[node.column] > node.threshold:
             prob = self.predictSample(x, node.right)
         else:
             prob = self.predictSample(x, node.left)

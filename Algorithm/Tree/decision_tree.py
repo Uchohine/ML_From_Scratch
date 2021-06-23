@@ -23,6 +23,8 @@ class Node:
         self.prob = None
         # depth of the given node
         self.depth = None
+        # direction of missing value
+        self.direct = None
 
         # if it is the root Node or not
         self.is_terminal = False

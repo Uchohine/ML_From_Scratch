@@ -28,8 +28,8 @@ class XGBoost():
         model.fit(x, y)
         ypred = model.predict(x)
         self.classifiers.append(model)
-        g = self.loss.Gradient(y,ypred)
-        h = self.loss.Hessian(y,ypred)
+        g = self.loss.Gradient(y, ypred)
+        h = self.loss.Hessian(y, ypred)
 
         for i in range(self.terminal_iter):
             model = XGTree(**self.arg)
@@ -58,7 +58,7 @@ if __name__ == '__main__':
 
     X_train, X_val, y_train, y_val = train_test_split(x, y, random_state=44)
 
-    model = XGBoost(max_depth=3, lbda = 0.01, eta = 0.08)
+    model = XGBoost(max_depth=3, lbda = 0.01, eta = 0.3)
 
     start = time.time()
     model.fit(X_train, y_train)
