@@ -8,11 +8,11 @@ from sklearn.datasets import load_iris
 import time
 
 
-def kernel_poly(x, z, degree = 2, coef0 = 1):
+def kernel_poly(x, z, degree = 3, coef0 = 0.0):
     return np.power(np.matmul(x, z.T) + coef0, degree)
 
 def kernel_RBF(X,Y, gamma = .1, var = 1):
-    X_norm = -gamma*np.einsum('ij,ij->i',X,X)
+    X_norm = -gamma * np.einsum('ij,ij->i', X, X)
     Y_norm = -gamma * np.einsum('ij,ij->i', Y, Y)
     return ne.evaluate('v * exp(A + B + C)', {\
         'A' : X_norm[:,None],\
@@ -22,10 +22,10 @@ def kernel_RBF(X,Y, gamma = .1, var = 1):
         'v' : var\
     })
 
-def kernel_linear(x, z):
+def kernel_linear(x, z, **kwargs):
     return np.matmul(x, z.T)
 
-def kernel_sigmoid(x, y, coef = 1, gamma = .5):
+def kernel_sigmoid(x, y, coef = 0.0, gamma = .5):
     return np.tanh(gamma * np.matmul(x, y.T) + coef)
 
 def get_kernel(name = 'linear'):
@@ -51,20 +51,28 @@ def is_pos_def(x):
 def check_symmetric(a, rtol=1e-05, atol=1e-08):
     return np.allclose(a, a.T, rtol=rtol, atol=atol)
 class svm():
-    def __init__(self, lbda = .01, kernel = 'linear', **kargs):
+    def __init__(self, lbda = .01, kernel = 'linear', gamma = 'auto',**kargs):
         self.weight = None
         self.lbda = lbda
         self.kernel = get_kernel(kernel)
+        self.gamma = gamma
         self.arg = kargs
 
     def fit(self, x, y):
+        if self.gamma == 'auto':
+            self.arg['gamma'] = 1 / x.shape[1]
+        else:
+            self.arg['gamma'] = 1 / (x.shape[1] * np.var(x))
         H = np.matmul(y, y.T) * self.kernel(x,x,**self.arg) / (4 * self.lbda)
         f = -np.ones(x.shape[0])
         Aeq = y.T.astype('float64')
         b = np.zeros(1)
-        alpha = qpsolvers.solve_qp(H,f,None,None,Aeq,b,sym_proj=True)
-        self.alpha = alpha * np.squeeze(y)
-        self.x = x
+        lb = np.zeros(x.shape[0])
+        ub = np.ones(x.shape[0]) / x.shape[0]
+        alpha = qpsolvers.solve_qp(H, f, G=None,h=None,A=Aeq,b=b,lb=lb,ub=ub,sym_proj=True)
+        idx = np.squeeze(np.argwhere((alpha < 1/x.shape[0] - 1e-5) & (alpha > 1e-5)))
+        self.alpha = alpha[idx] * np.squeeze(y)[idx]
+        self.x = x[idx]
 
     def predict(self,x):
         k = self.kernel(self.x, x, **self.arg)
@@ -85,7 +93,6 @@ if __name__ == '__main__':
 
     from sklearn.metrics import accuracy_score
 
-    model.no_grad = True
     y_pred = model.predict(X_val)
     print(f'Accuracy for self built model {accuracy_score(y_val, y_pred)}')
 
@@ -93,7 +100,7 @@ if __name__ == '__main__':
     from sklearn.preprocessing import StandardScaler
     from sklearn.svm import SVC
 
-    model = make_pipeline(StandardScaler(), SVC(kernel='linear', gamma='auto'))
+    model = make_pipeline(StandardScaler(), SVC())
     start = time.time()
     model.fit(X_train, np.squeeze(y_train))
     end = time.time()
