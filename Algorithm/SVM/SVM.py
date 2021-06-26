@@ -1,4 +1,6 @@
 import numpy as np
+import numexpr as ne
+from scipy.linalg.blas import sgemm
 import qpsolvers
 
 import pandas as pd
@@ -6,15 +8,19 @@ from sklearn.datasets import load_iris
 import time
 
 
-def kernel_poly(x, z, degree, intercept):
-    return np.power(np.matmul(x, z.T) + intercept, degree)
+def kernel_poly(x, z, degree = 2, coef0 = 1):
+    return np.power(np.matmul(x, z.T) + coef0, degree)
 
-def kernel_RBF(x, z, sigma):
-    n = x.shape[0]
-    m = z.shape[0]
-    xx = np.dot(np.sum(np.power(x, 2), 1).reshape(n, 1), np.ones((1, m)))
-    zz = np.dot(np.sum(np.power(z, 2), 1).reshape(m, 1), np.ones((1, n)))
-    return np.exp(-(xx + zz.T - 2 * np.dot(x, z.T)) / (2 * sigma ** 2))
+def kernel_RBF(X,Y, gamma = .1, var = 1):
+    X_norm = -gamma*np.einsum('ij,ij->i',X,X)
+    Y_norm = -gamma * np.einsum('ij,ij->i', Y, Y)
+    return ne.evaluate('v * exp(A + B + C)', {\
+        'A' : X_norm[:,None],\
+        'B' : Y_norm[None,:],\
+        'C' : sgemm(alpha=2.0*gamma, a=X, b=Y, trans_b=True),\
+        'g' : gamma,\
+        'v' : var\
+    })
 
 def kernel_linear(x, z):
     return np.matmul(x, z.T)
@@ -45,29 +51,59 @@ def is_pos_def(x):
 def check_symmetric(a, rtol=1e-05, atol=1e-08):
     return np.allclose(a, a.T, rtol=rtol, atol=atol)
 class svm():
-    def __init__(self, lbda = .1, kernel = 'linear', **kargs):
+    def __init__(self, lbda = .01, kernel = 'linear', **kargs):
         self.weight = None
         self.lbda = lbda
         self.kernel = get_kernel(kernel)
         self.arg = kargs
 
     def fit(self, x, y):
-        print(x.shape)
-        H = np.matmul(y, y.T) * np.matmul(x, x.T) / (4 * self.lbda)
-        print(np.linalg.eigh(H))
+        H = np.matmul(y, y.T) * self.kernel(x,x,**self.arg) / (4 * self.lbda)
         f = -np.ones(x.shape[0])
         Aeq = y.T.astype('float64')
         b = np.zeros(1)
-        print(Aeq.shape)
-        alpha = qpsolvers.solve_qp(H,f,None,None,Aeq,b)
+        alpha = qpsolvers.solve_qp(H,f,None,None,Aeq,b,sym_proj=True)
+        self.alpha = alpha * np.squeeze(y)
+        self.x = x
+
+    def predict(self,x):
+        k = self.kernel(self.x, x, **self.arg)
+        ypred = np.sum(np.matmul(np.diag(self.alpha), k), axis=0) / (2*self.lbda)
+        return np.sign(ypred)
 
 
 if __name__ == '__main__':
     import scipy.io
     mat = scipy.io.loadmat('problem_4_2_a.mat')
-    Xtest, Xtrain, Ytest, Ytrain = mat['Xtest'], mat['Xtrain'], mat['Ytest'], mat['Ytrain']
-    model = svm()
-    model.fit(Xtrain, Ytrain)
+    X_val, X_train, y_val, y_train = mat['Xtest'], mat['Xtrain'], mat['Ytest'], mat['Ytrain']
+    model = svm(kernel='linear')
+
+    start = time.time()
+    model.fit(X_train, y_train)
+    end = time.time()
+    print('elapsed time : {:.5f}s'.format((end - start)))
+
+    from sklearn.metrics import accuracy_score
+
+    model.no_grad = True
+    y_pred = model.predict(X_val)
+    print(f'Accuracy for self built model {accuracy_score(y_val, y_pred)}')
+
+    from sklearn.pipeline import make_pipeline
+    from sklearn.preprocessing import StandardScaler
+    from sklearn.svm import SVC
+
+    model = make_pipeline(StandardScaler(), SVC(kernel='linear', gamma='auto'))
+    start = time.time()
+    model.fit(X_train, np.squeeze(y_train))
+    end = time.time()
+    print('elapsed time : {:.5f}s'.format((end - start)))
+    y_pred = model.predict(X_val)
+    print(f'Accuracy for sklearn Decision Tree {accuracy_score(y_val, y_pred)}')
+
+
+
+
 
 
 
