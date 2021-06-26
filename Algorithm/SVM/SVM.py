@@ -70,7 +70,7 @@ class svm():
         lb = np.zeros(x.shape[0])
         ub = np.ones(x.shape[0]) / x.shape[0]
         alpha = qpsolvers.solve_qp(H, f, G=None,h=None,A=Aeq,b=b,lb=lb,ub=ub,sym_proj=True)
-        idx = np.squeeze(np.argwhere((alpha < 1/x.shape[0] - 1e-5) & (alpha > 1e-5)))
+        idx = ((alpha < 1/x.shape[0] - 1e-5) & (alpha > 1e-5))
         self.alpha = alpha[idx] * np.squeeze(y)[idx]
         self.x = x[idx]
 
