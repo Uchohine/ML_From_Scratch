@@ -1,62 +1,10 @@
 import numpy as np
-import numexpr as ne
-from scipy.linalg.blas import sgemm
+from Algorithm.Kernels.kernel import get_kernel
 import qpsolvers
 
 import pandas as pd
 from sklearn.datasets import load_iris
 import time
-
-
-def kernel_poly(x, z, degree=3, gamma=.1, coef0=0.0):
-    return np.power(gamma * np.matmul(x, z.T) + coef0, degree)
-
-
-def kernel_RBF(X, Y, gamma=.1, var=1):
-    X_norm = -gamma * np.einsum('ij,ij->i', X, X)
-    Y_norm = -gamma * np.einsum('ij,ij->i', Y, Y)
-    return ne.evaluate('v * exp(A + B + C)', { \
-        'A': X_norm[:, None], \
-        'B': Y_norm[None, :], \
-        'C': sgemm(alpha=2.0 * gamma, a=X, b=Y, trans_b=True), \
-        'g': gamma, \
-        'v': var \
-        })
-
-
-def kernel_linear(x, z, **kwargs):
-    return np.matmul(x, z.T)
-
-
-def kernel_sigmoid(x, y, coef=0.0, gamma=.5):
-    return np.tanh(gamma * np.matmul(x, y.T) + coef)
-
-
-def get_kernel(name='linear'):
-    switcher = {
-        'linear': kernel_linear,
-        'poly': kernel_poly,
-        'RBF': kernel_RBF,
-        'sigmoid': kernel_sigmoid
-    }
-    res = switcher.get(name)
-    if res == None:
-        raise Exception('No Kernel Named: "{name}".'.format(name=name));
-    return res
-
-
-def to_one_hot(x):
-    res = np.zeros((x.size, x.max() + 1))
-    res[np.arange(x.size), x] = 1
-    return res
-
-
-def is_pos_def(x):
-    return np.all(np.linalg.eigvals(x) > 0)
-
-
-def check_symmetric(a, rtol=1e-05, atol=1e-08):
-    return np.allclose(a, a.T, rtol=rtol, atol=atol)
 
 
 class svm():
