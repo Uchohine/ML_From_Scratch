@@ -17,7 +17,7 @@ class Node:
 
 
 class svm():
-    def __init__(self, lbda=.01, kernel='linear', gamma='scale', tol=1e-5, C=1.0, **kargs):
+    def __init__(self, lbda=.01, kernel='rbf', gamma='scale', tol=1e-3, C=1.0, **kargs):
         self.lbda = lbda
         self.kernel = kernel
         self.gamma = gamma
@@ -44,10 +44,7 @@ class svm():
 
     def fit(self, x, y):
         y = np.squeeze(y)
-        classes = np.amax(y) + 1
-        candidates = list()
-        for i in range(classes):
-            candidates.append(i)
+        candidates = np.arange(np.amax(y) + 1)
         self.buildtree(candidates, x, y, self.Node)
 
     def _predict(self, x, node):
@@ -57,8 +54,10 @@ class svm():
         pred = node.classifier.predict(x)
         neg = (pred < 0)
         pos = (pred > 0)
-        res[neg] = self._predict(x[neg], node.left)
-        res[pos] = self._predict(x[pos], node.right)
+        if (neg == True).any():
+            res[neg] = self._predict(x[neg], node.left)
+        if (pos == True).any():
+            res[pos] = self._predict(x[pos], node.right)
         return res
 
     def predict(self, x):
@@ -72,8 +71,10 @@ if __name__ == '__main__':
 
     from sklearn.model_selection import train_test_split
 
+    k = 'poly'
+
     X_train, X_val, y_train, y_val = train_test_split(x, y, random_state=44)
-    model = svm()
+    model = svm(kernel=k)
 
     start = time.time()
     model.fit(X_train, y_train)
@@ -91,9 +92,9 @@ if __name__ == '__main__':
     from sklearn.preprocessing import StandardScaler
     from sklearn.svm import SVC
 
-    model = make_pipeline(StandardScaler(), SVC(kernel='rbf'))
+    model = make_pipeline(StandardScaler(), SVC(kernel=k))
     start = time.time()
-    model.fit(X_train, np.squeeze(y_train))
+    model.fit(X_train, y_train)
     end = time.time()
     print('elapsed time : {:.5f}s'.format((end - start)))
     y_pred_ref = model.predict(X_val)

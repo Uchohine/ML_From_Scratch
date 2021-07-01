@@ -8,7 +8,7 @@ import time
 
 
 class svc():
-    def __init__(self, lbda=.01, kernel='rbf', gamma='scale', tol=1e-5, C=1.0, **kargs):
+    def __init__(self, lbda=.01, kernel='linear', gamma='scale', tol=1e-3, C=1.0, **kargs):
         self.weight = None
         self.lbda = lbda
         self.kernel = get_kernel(kernel)
@@ -19,8 +19,10 @@ class svc():
 
 
     def fit(self, x, y):
+        if len(y.shape) != 2:
+            y = y.reshape(-1 , 1)
         self.std = np.std(x, axis=0)
-        self.std[self.std == 0] = 1
+        self.std[self.std == 0] = 1.0
         self.mean = np.mean(x, axis=0)
         x = (x - self.mean) / self.std
         if self.gamma == 'auto':
@@ -37,7 +39,7 @@ class svc():
         b = np.zeros(1)
         lb = np.zeros(m)
         ub = np.ones(m) * self.C
-        a = qpsolvers.solve_qp(H, f, G=G, h=h, A=Aeq, b=b, lb=lb, ub=ub, solver='cvxopt', feastol=self.tol)
+        a = qpsolvers.solve_qp(H, f, G=G, h=h, A=Aeq, b=b, lb=lb, ub=ub, solver='cvxopt')
         idx = a > self.tol
         ind = np.arange(len(a))[idx]
         self.a = a[idx]
@@ -66,7 +68,7 @@ if __name__ == '__main__':
     import scipy.io
     mat = scipy.io.loadmat('problem_4_2_a.mat')
     X_val, X_train, y_val, y_train = mat['Xtest'], mat['Xtrain'], mat['Ytest'], mat['Ytrain']
-    model = svc(kernel='sigmoid')
+    model = svc(kernel='rbf')
 
     start = time.time()
     model.fit(X_train, y_train)
@@ -76,6 +78,7 @@ if __name__ == '__main__':
     from sklearn.metrics import accuracy_score
 
     y_pred_self = model.predict(X_val)
+    print(y_pred_self)
     print(f'Accuracy for self built model {accuracy_score(y_val, y_pred_self)}')
 
     from sklearn.pipeline import make_pipeline
@@ -88,5 +91,6 @@ if __name__ == '__main__':
     end = time.time()
     print('elapsed time : {:.5f}s'.format((end - start)))
     y_pred_ref = model.predict(X_val)
-    print(f'Accuracy for sklearn SVC {accuracy_score(y_val, y_pred_ref)}')
+    print(y_pred_ref)
+    print(f'Accuracy for sklearn Decision Tree {accuracy_score(y_val, y_pred_ref)}')
 
