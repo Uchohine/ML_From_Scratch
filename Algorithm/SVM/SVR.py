@@ -41,7 +41,8 @@ class svr():
                 H[2 * i, 2 * j], H[2 * i + 1, 2 * j + 1] = K[i, j], K[i, j]
                 H[2 * i, 2 * j + 1], H[2 * i + 1, 2 * j] = -K[i, j], -K[i, j]
         b = np.zeros(1)
-        a = qpsolvers.solve_qp(H.astype('float64'), f, G=None, h=None, A=Aeq, b=b, lb=lb, ub=ub, solver='cvxopt',  feastol= None)
+        a = qpsolvers.solve_qp(H.astype('float64'), f, G=None, h=None, A=Aeq,\
+                               b=b, lb=lb, ub=ub, solver='cvxopt', feastol=None)
         tmup = list()
         tmdp = list()
         for i in range(a.shape[0]):
@@ -84,7 +85,8 @@ if __name__ == '__main__':
     # #############################################################################
     # Fit regression model
     svr_rbf = svr(kernel='rbf', C=100, gamma=0.1, epsilon=.1)
-    svr_lin = svr(kernel='linear', C=100, gamma='auto')
+    svr_lin = SVR(kernel='poly', C=100, gamma='auto', degree=3, epsilon=.1,
+                   coef0=1)
     svr_poly = svr(kernel='poly', C=100, gamma='auto', degree=3, epsilon=.1,
                    coef0=1)
 

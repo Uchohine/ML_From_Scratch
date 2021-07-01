@@ -1,71 +1,79 @@
+from Algorithm.SVM.SVC import svc
 import numpy as np
-from Algorithm.Kernels.kernel import get_kernel
-import qpsolvers
 
 import pandas as pd
-from sklearn.datasets import load_iris
+from sklearn.datasets import load_wine
 import time
+
+class Node:
+    def __init__(self):
+        # links to the left and right child nodes
+        self.classes = None
+        self.classifier = None
+        self.right = None
+        self.left = None
+        self.pred = None
+        self.is_terminal = False
 
 
 class svm():
     def __init__(self, lbda=.01, kernel='linear', gamma='scale', tol=1e-5, C=1.0, **kargs):
-        self.weight = None
         self.lbda = lbda
-        self.kernel = get_kernel(kernel)
+        self.kernel = kernel
         self.gamma = gamma
         self.tol = tol
         self.C = C
         self.arg = kargs
+        self.Node = Node()
 
+    def buildtree(self, c, x, y, node):
+        if len(c) < 2:
+            node.is_terminal = True
+            node.pred = c[0]
+            return
+        idx = ((y == c[0]) | (y == c[-1]))
+        sep = (float)((c[0] + c[-1]) / 2)
+        xtrain = x[idx]
+        ytrain = y[idx]
+        for i in range(ytrain.shape[0]):
+            ytrain[i] = 1 if ytrain[i] > sep else -1
+        node.classifier = svc(self.lbda, self.kernel, self.gamma, self.tol, self.C, **self.arg).fit(xtrain, ytrain)
+        node.left, node.right = Node(), Node()
+        self.buildtree(c[0:-1], x, y, node.left)
+        self.buildtree(c[1:], x, y, node.right)
 
     def fit(self, x, y):
-        self.std = np.std(x, axis=0)
-        self.std[self.std == 0] = 1
-        self.mean = np.mean(x, axis=0)
-        x = (x - self.mean) / self.std
-        if self.gamma == 'auto':
-            self.arg['gamma'] = 1 / x.shape[1]
-        else:
-            self.arg['gamma'] = 1 / (x.shape[1] * np.var(x))
-        m = x.shape[0]
-        K = self.kernel(x, x, **self.arg)
-        H = (np.matmul(y, y.T) * K).astype('float64')
-        f = -np.ones(m)
-        G = np.vstack((np.eye(m) * -1, np.eye(m)))
-        h = np.hstack((np.zeros(m), np.ones(m) * self.C))
-        Aeq = y.reshape(1, -1).astype('float64')
-        b = np.zeros(1)
-        lb = np.zeros(m)
-        ub = np.ones(m) * self.C
-        a = qpsolvers.solve_qp(H, f, G=G, h=h, A=Aeq, b=b, lb=lb, ub=ub, solver='cvxopt', feastol=self.tol)
-        idx = a > self.tol
-        ind = np.arange(len(a))[idx]
-        self.a = a[idx]
-        self.y = np.squeeze(y)[idx]
-        self.x = x[idx]
+        y = np.squeeze(y)
+        classes = np.amax(y) + 1
+        candidates = list()
+        for i in range(classes):
+            candidates.append(i)
+        self.buildtree(candidates, x, y, self.Node)
 
-        # Intercept
-        self.b = 0
-        for n in range(len(self.a)):
-            self.b += self.y[n]
-            self.b -= np.sum(self.a * self.y * K[ind[n], idx])
-        self.b /= len(self.a)
-
-    def project(self, x):
-        x = (x - self.mean) / self.std
-        k = self.kernel(self.x, x, **self.arg)
-        ypred = np.sum(np.matmul(np.diag(self.a * self.y), k), axis=0)
-        return ypred + self.b
+    def _predict(self, x, node):
+        res = np.zeros(x.shape[0])
+        if node.is_terminal:
+            return node.pred
+        pred = node.classifier.predict(x)
+        neg = (pred < 0)
+        pos = (pred > 0)
+        res[neg] = self._predict(x[neg], node.left)
+        res[pos] = self._predict(x[pos], node.right)
+        return res
 
     def predict(self, x):
-        return np.sign(self.project(x))
+        return self._predict(x, self.Node)
+
 
 
 if __name__ == '__main__':
-    import scipy.io
-    mat = scipy.io.loadmat('problem_4_2_a.mat')
-    X_val, X_train, y_val, y_train = mat['Xtest'], mat['Xtrain'], mat['Ytest'], mat['Ytrain']
-    model = svm(kernel='sigmoid')
+    data = load_wine()
+    x, y, col = data['data'], data['target'], data['feature_names']
+
+    from sklearn.model_selection import train_test_split
+
+    X_train, X_val, y_train, y_val = train_test_split(x, y, random_state=44)
+    model = svm()
 
     start = time.time()
     model.fit(X_train, y_train)
@@ -74,9 +82,10 @@ if __name__ == '__main__':
 
     from sklearn.metrics import accuracy_score
 
-    y_pred_self = model.predict(X_val)
-    print(y_pred_self)
-    print(f'Accuracy for self built model {accuracy_score(y_val, y_pred_self)}')
+    y_pred = model.predict(X_val)
+    print(y_pred)
+    print(y_val)
+    print(f'Accuracy for self built model {accuracy_score(y_val, y_pred)}')
 
     from sklearn.pipeline import make_pipeline
     from sklearn.preprocessing import StandardScaler
@@ -89,6 +98,5 @@ if __name__ == '__main__':
     print('elapsed time : {:.5f}s'.format((end - start)))
     y_pred_ref = model.predict(X_val)
     print(y_pred_ref)
-    print(f'Accuracy for sklearn Decision Tree {accuracy_score(y_val, y_pred_ref)}')
-    print(np.argwhere(y_pred_ref != y_pred_self))
+    print(f'Accuracy for sklearn SVC {accuracy_score(y_val, y_pred_ref)}')
 
