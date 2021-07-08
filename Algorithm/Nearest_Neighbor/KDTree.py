@@ -35,8 +35,8 @@ class KDTree():
         node.column = np.argmax(np.var(data[:, 0:-1], axis=0))
         node.threshold = np.median(data[:, node.column])
 
-        left = data[:, node.column] > node.threshold
-        right = data[:, node.column] <= node.threshold
+        left = data[:, node.column] < node.threshold
+        right = data[:, node.column] >= node.threshold
 
         node.left = Node()
         node.left.parent = node
@@ -61,41 +61,39 @@ class KDTree():
         self.visited = (self.list_size + 1) * [0]
         return self
 
-    def _prune(self, cand, item, node = Node()):
+    def _prune(self, cand, item, dist, node = Node()):
         if self.visited[node.idx] != 0:
-            return cand
+            return cand, dist
         self.visited[node.idx] = 1
         if node.is_terminal:
-            cand = np.vstack((cand, node.neighbors))
-            dist = list()
-            for i in range(cand.shape[0]):
-                dist.append(self.distance_measure(item, cand[i, 0:-1]))
+            tmp = list()
+            for i in range(node.neighbors.shape[0]):
+                tmp.append(self.distance_measure(item, node.neighbors[i, 0:-1]))
+            dist = np.hstack((dist, tmp))
             idx = np.argsort(np.array(dist))[0:min(self.k, len(dist))]
-            return cand[idx]
+            return np.vstack((cand, node.neighbors))[idx], dist[idx]
         else:
-            dist = self.distance_measure(cand[-1, node.column], item[node.column])
-            if dist > self.distance_measure(node.threshold, item[node.column]):
-                cand = self._prune(cand, item, node.left)
-                cand = self._prune(cand, item, node.right)
+            col_dist = self.distance_measure(cand[-1, node.column], item[node.column])
+            if col_dist > self.distance_measure(node.threshold, item[node.column]):
+                cand, dist = self._prune(cand, item, dist, node.left)
+                cand, dist = self._prune(cand, item, dist, node.right)
             if node.parent != None:
-                cand = self._prune(cand, item, node.parent)
-            return cand
+                cand, dist = self._prune(cand, item, dist, node.parent)
+            return cand, dist
 
-
-
-
-    def _predict(self, item, node = Node()):
+    def _predict(self, item, node):
         if node.is_terminal:
             dist = list()
             for i in range(node.neighbors.shape[0]):
                 dist.append(self.distance_measure(item, node.neighbors[i, 0:-1]))
             idx = np.argsort(np.array(dist))[0:min(self.k, len(dist))]
+            dist = np.array(dist)[idx]
             self.visited[node.idx] = 1
-            pool = self._prune(node.neighbors[idx], item, node.parent)
+            pool, dist = self._prune(node.neighbors[idx], item, dist, node.parent)
             self.visited = (self.list_size + 1) * [0]
             return pool
 
-        if item[node.column] > node.threshold:
+        if item[node.column] >= node.threshold:
             return self._predict(item, node.right)
 
         if item[node.column] < node.threshold:

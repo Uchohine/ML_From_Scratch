@@ -2,44 +2,51 @@ import numpy as np
 
 
 class hashtable():
-    def __init__(self, data, label, k, hash = None):
+    def __init__(self, data, k, hash = None):
         if hash == None:
-            self.hash = np.random.randn(data.shape[1], k)
+            self.hash = np.random.randn(data.shape[1] - 2, k)
         else:
             self.hash = hash
         self.table = dict()
         self.transform = 1 << np.arange(k - 1, -1, -1)
-        self._hash(data, label)
+        self._hash(data)
 
-    def _hash(self, key, value):
-        new_key = np.matmul(np.matmul(key, self.hash) >= 0, self.transform)
-        if len(value.shape) != 2:
-            value = value.reshape((-1, 1))
-        key = np.hstack((key, value))
+    def _hash(self, key):
+        new_key = np.matmul((np.matmul(key[:, 0:-2], self.hash) >= 0).astype('int'), self.transform)
         for i in range(new_key.shape[0]):
             old_val = self.table.get(new_key[i])
-            self.table[new_key[i]] = np.vstack((old_val, key[i, :])) if old_val is not None else key[i, :]
+            self.table[new_key[i]] = np.vstack((old_val, key[i, -1])) if old_val is not None else key[i, -1]
 
     def __getitem__(self, item):
         key = np.matmul(np.matmul(item, self.hash) >= 0, self.transform)
         return self.table.get(key)
 
 class LSH():
-    def __init__(self, k=8, l=8):
+    def __init__(self, k, r=32, l=32):
         self.k = k
+        self.r = r
         self.l = l
         self.table = list()
 
     def fit(self, x, y):
+        if len(y.shape) != 2:
+            y = y.reshape((-1, 1))
+        idx = np.arange(x.shape[0]).reshape((-1,1))
+        self.data = np.hstack((x, y, idx))
         for i in range(self.l):
-            self.table.append(hashtable(x,y,self.k))
+            self.table.append(hashtable(self.data, self.r))
         return self
 
     def predict(self, item):
         res = self.table[0][item]
         for i in range(1, self.l):
-            res = np.vstack((self.table[i][item], res))
-        return res
+            tmp = self.table[i][item]
+            if tmp is not None:
+                res = np.vstack((res, tmp))
+        res = res.squeeze()
+        res = np.bincount(res.squeeze().astype('int'))
+        res = res.argsort()[::-1][:self.k]
+        return self.data[res, 0: -1]
 
 
 

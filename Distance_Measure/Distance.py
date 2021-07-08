@@ -4,7 +4,6 @@ def l2(x, y):
     return np.linalg.norm(x - y)
 
 def cosine_distance(a, b):
-    print(a)
     if a.shape != b.shape:
         raise RuntimeError("array {} shape not match {}".format(a.shape, b.shape))
     if a.ndim==1:

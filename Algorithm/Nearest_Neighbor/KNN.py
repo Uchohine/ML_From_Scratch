@@ -17,18 +17,26 @@ class KNN():
 
     def fit(self,x,y):
         if self.algorithm == 'LSH':
-            self.db = LSH(**self.arg).fit(x,y)
+            self.db = LSH(k=self.k).fit(x,y)
         if self.algorithm == 'KDTree':
             self.distance_measure = get_distance_measure('l2')
             self.db = KDTree(self.k, self.distance_measure).fit(x,y)
+        if self.algorithm == 'BruteForce':
+            if len(y.shape) != 2:
+                y = y.reshape(-1,1)
+            self.db = np.hstack((x, y))
         return self
 
     def predict(self, item):
         pred = list()
         for i in range(item.shape[0]):
             cur = item[i, :]
-            nn = self.db.predict(cur)
-            if nn.shape[0] >= self.k:
+            if self.algorithm == 'BruteForce':
+                nn = self.db
+            else:
+                nn = self.db.predict(cur)
+            if nn.shape[0] > self.k:
+                print(nn.shape)
                 dist = list()
                 for i in range(nn.shape[0]):
                     dist.append(self.distance_measure(nn[i, 0:-1], cur))
