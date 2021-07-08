@@ -53,18 +53,15 @@ if __name__ == '__main__':
     print(y_val)
     print(f'Accuracy for self built model {accuracy_score(y_val, y_pred)}')
 
-    from sklearn.pipeline import make_pipeline
-    from sklearn.preprocessing import StandardScaler
-    from sklearn.svm import SVC
-
-    model = make_pipeline(StandardScaler(), SVC())
+    from sklearn.neighbors import KNeighborsClassifier
+    model = KNeighborsClassifier(n_neighbors=15)
     start = time.time()
     model.fit(X_train, y_train)
     end = time.time()
     print('elapsed time : {:.5f}s'.format((end - start)))
     y_pred_ref = model.predict(X_val)
     print(y_pred_ref)
-    print(f'Accuracy for sklearn SVC {accuracy_score(y_val, y_pred_ref)}')
+    print(f'Accuracy for sklearn KNN {accuracy_score(y_val, y_pred_ref)}')
 
 
 
