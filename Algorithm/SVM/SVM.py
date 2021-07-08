@@ -71,7 +71,7 @@ if __name__ == '__main__':
 
     from sklearn.model_selection import train_test_split
 
-    k = 'poly'
+    k = 'sigmoid'
 
     X_train, X_val, y_train, y_val = train_test_split(x, y, random_state=44)
     model = svm(kernel=k)

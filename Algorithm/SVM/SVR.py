@@ -84,7 +84,7 @@ if __name__ == '__main__':
 
     # #############################################################################
     # Fit regression model
-    svr_rbf = svr(kernel='sigmoid', C=100, gamma=0.1, epsilon=.1)
+    svr_rbf = svr(kernel='rbf', C=100, gamma=0.1, epsilon=.1)
     svr_lin = SVR(kernel='poly', C=100, gamma='auto', degree=3, epsilon=.1,
                    coef0=1)
     svr_poly = svr(kernel='poly', C=100, gamma='auto', degree=3, epsilon=.1,

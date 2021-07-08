@@ -20,7 +20,7 @@ class svc():
 
     def fit(self, x, y):
         if len(y.shape) != 2:
-            y = y.reshape(-1 , 1)
+            y = y.reshape(-1, 1)
         self.std = np.std(x, axis=0)
         self.std[self.std == 0] = 1.0
         self.mean = np.mean(x, axis=0)
