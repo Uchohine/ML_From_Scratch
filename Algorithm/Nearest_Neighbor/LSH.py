@@ -35,7 +35,7 @@ class LSH():
             self.table.append(hashtable(x,y,self.k))
         return self
 
-    def __getitem__(self, item):
+    def predict(self, item):
         res = self.table[0][item]
         for i in range(1, self.l):
             res = np.vstack((self.table[i][item], res))
