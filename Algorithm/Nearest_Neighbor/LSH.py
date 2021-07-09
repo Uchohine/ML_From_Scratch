@@ -47,12 +47,9 @@ class LSH():
         if len(y.shape) != 2:
             y = y.reshape((-1, 1))
         idx = np.arange(x.shape[0]).reshape((-1, 1))
-        value, vector = PCA(x, min(self.r, x.shape[1] // 2))
         self.data = np.hstack((x, y, idx))
         for i in range(self.l):
-            a = np.random.randn(vector.shape[1], vector.shape[1])
-            hash = np.matmul(vector, a)
-            self.table.append(hashtable(self.data, self.r, hash=hash))
+            self.table.append(hashtable(self.data, self.r))
         return self
 
     def predict(self, item):
