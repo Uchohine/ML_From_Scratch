@@ -41,10 +41,11 @@ class BallTree():
             node.neighbors = data
             node.is_terminal = True
             return
-        node.mean = data[0, 0:-1]
-        left = self._find_farthest_pt(node.mean, data[:, 0:-1])
+        anchor = data[0, 0:-1]
+        left = self._find_farthest_pt(anchor, data[:, 0:-1])
         right = self._find_farthest_pt(left, data[:, 0:-1])
         node.projection = right - left
+        node.mean = node.projection / 2
         norm = np.linalg.norm(node.projection)
         node.projection = node.projection / norm ** 2
         projection = (np.matmul(node.projection.reshape((1, -1)), data[:, 0:-1].T)).squeeze()
