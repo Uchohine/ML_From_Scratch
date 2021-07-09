@@ -1,6 +1,7 @@
 import numpy as np
 from Algorithm.Nearest_Neighbor.LSH import LSH
 from Algorithm.Nearest_Neighbor.KDTree import KDTree
+from Algorithm.Nearest_Neighbor.BallTree import BallTree
 from Distance_Measure.Distance import get_distance_measure
 
 import pandas as pd
@@ -21,6 +22,8 @@ class KNN():
         if self.algorithm == 'KDTree':
             self.distance_measure = get_distance_measure('l2')
             self.db = KDTree(self.k, self.distance_measure).fit(x,y)
+        if self.algorithm == 'BallTree':
+            self.db = BallTree(self.k, self.distance_measure).fit(x,y)
         if self.algorithm == 'BruteForce':
             if len(y.shape) != 2:
                 y = y.reshape(-1,1)
@@ -54,7 +57,7 @@ if __name__ == '__main__':
     from sklearn.model_selection import train_test_split
 
     X_train, X_val, y_train, y_val = train_test_split(x, y, random_state=44)
-    model = KNN(k=15, distance_measure='cos', algorithm='KDTree')
+    model = KNN(k=15, distance_measure='l2', algorithm='BallTree')
 
     model.fit(X_train, y_train)
 
@@ -69,7 +72,7 @@ if __name__ == '__main__':
     print(f'Accuracy for self built model {accuracy_score(y_val, y_pred)}')
 
     from sklearn.neighbors import KNeighborsClassifier
-    model = KNeighborsClassifier(n_neighbors=15)
+    model = KNeighborsClassifier(n_neighbors=15,algorithm='ball_tree')
 
 
     model.fit(X_train, y_train)

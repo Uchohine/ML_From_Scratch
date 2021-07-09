@@ -9,8 +9,9 @@ class Node:
         self.left = None
 
         # derived from splitting criteria
-        self.column = None
-        self.threshold = None
+        self.mean = None
+        self.radius = None
+        self.projection = None
 
         # probability for object inside the Node to belong for each of the given classes
         self.neighbors = None
@@ -20,36 +21,48 @@ class Node:
         # if it is the root Node or not
         self.is_terminal = False
 
-class KDTree():
+
+class BallTree():
     def __init__(self, k, distance_measure):
         self.k = k
         self.tree = None
         self.list_size = 0
         self.distance_measure = distance_measure
 
-    def buildtree(self, data, node):
-        if data.shape[0] <= 3:
-            node.is_terminal = True
-            node.neighbors = data
-            return
-        node.column = np.argmax(np.var(data[:, 0:-1], axis=0))
-        node.threshold = np.median(data[:, node.column])
+    def _find_farthest_pt(self, x, data):
+        dist = list()
+        for i in range(data.shape[0]):
+            dist.append(self.distance_measure(x, data[i, :]))
+        dist = np.argsort(np.array(dist))
+        return data[dist[-1], :]
 
-        left = data[:, node.column] < node.threshold
-        right = data[:, node.column] >= node.threshold
+    def buildtree(self, data, node = Node()):
+        if data.shape[0] <= 3:
+            node.neighbors = data
+            node.is_terminal = True
+            return
+        node.mean = data[0, 0:-1]
+        left = self._find_farthest_pt(node.mean, data[:, 0:-1])
+        right = self._find_farthest_pt(left, data[:, 0:-1])
+        node.projection = right - left
+        norm = np.linalg.norm(node.projection)
+        node.projection = node.projection / norm ** 2
+        projection = (np.matmul(node.projection.reshape((1, -1)), data[:, 0:-1].T)).squeeze()
+        node.radius = np.mean(projection)
+        left = projection < node.radius
+        right = projection >= node.radius
 
         node.left = Node()
         node.left.parent = node
         node.left.idx = 2 * node.idx
+        self.buildtree(data[left], node.left)
 
         node.right = Node()
         node.right.parent = node
-        node.right.idx = 2 * node.idx + 1
+        node.right.idx = 2 * node.idx
+        self.buildtree(data[right], node.right)
 
         self.list_size = max(self.list_size, node.right.idx)
-
-        self.buildtree(data[left], node.left)
-        self.buildtree(data[right], node.right)
 
     def fit(self, x, y):
         if len(y.shape) != 2:
@@ -65,15 +78,15 @@ class KDTree():
         if self.visited[node.idx] != 0:
             return cand, dist
         self.visited[node.idx] = 1
-        col_dist = self.distance_measure(cand[-1, node.column], item[node.column])
-        if col_dist > self.distance_measure(node.threshold, item[node.column]):
+        col_dist = dist[-1]
+        if col_dist > self.distance_measure(node.mean, item):
             cand, dist = self._predict(cand, item, dist, node.left)
             cand, dist = self._predict(cand, item, dist, node.right)
         if node.parent != None:
             cand, dist = self._prune(cand, item, dist, node.parent)
         return cand, dist
 
-    def _predict(self, cand, item, dist, node):
+    def _predict(self, cand, item, dist, node = Node()):
         if node.is_terminal:
             tmp = list()
             for i in range(node.neighbors.shape[0]):
@@ -86,10 +99,12 @@ class KDTree():
             pool, dist = self._prune(cand, item, dist, node.parent)
             return pool, dist
 
-        if item[node.column] >= node.threshold:
+        projection = (np.matmul(node.projection.reshape((1, -1)), item.T)).squeeze()
+
+        if projection >= node.radius:
             return self._predict(cand, item, dist, node.right)
 
-        if item[node.column] < node.threshold:
+        if projection < node.radius:
             return self._predict(cand, item, dist, node.left)
 
     def predict(self, item):
@@ -99,9 +114,3 @@ class KDTree():
         self.visited = (self.list_size + 1) * [0]
         return cand
 
-
-if __name__ == '__main__':
-    x = np.random.randn(100,100)
-    y = (np.random.randn(100,1) > 0).astype('int')
-    hash = KDTree(k = 3)
-    hash.fit(x, y)
