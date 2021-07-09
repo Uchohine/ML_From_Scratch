@@ -21,11 +21,10 @@ class Node:
         self.is_terminal = False
 
 class KDTree():
-    def __init__(self, k, distance_measure):
+    def __init__(self, k):
         self.k = k
         self.tree = None
         self.list_size = 0
-        self.distance_measure = distance_measure
 
     def buildtree(self, data, node):
         if data.shape[0] <= 3:
@@ -33,7 +32,8 @@ class KDTree():
             node.neighbors = data
             return
         node.column = np.argmax(np.var(data[:, 0:-1], axis=0))
-        node.threshold = np.median(data[:, node.column])
+        #this can be np.median, but I find that np.mean gives slightly better performance
+        node.threshold = np.mean(data[:, node.column])
 
         left = data[:, node.column] < node.threshold
         right = data[:, node.column] >= node.threshold
@@ -65,8 +65,8 @@ class KDTree():
         if self.visited[node.idx] != 0:
             return cand, dist
         self.visited[node.idx] = 1
-        col_dist = self.distance_measure(cand[-1, node.column], item[node.column])
-        if col_dist > self.distance_measure(node.threshold, item[node.column]):
+        col_dist = abs(cand[-1, node.column] - item[node.column])
+        if col_dist > abs(node.threshold - item[node.column]):
             cand, dist = self._predict(cand, item, dist, node.left)
             cand, dist = self._predict(cand, item, dist, node.right)
         if node.parent != None:
@@ -77,7 +77,7 @@ class KDTree():
         if node.is_terminal:
             tmp = list()
             for i in range(node.neighbors.shape[0]):
-                tmp.append(self.distance_measure(item, node.neighbors[i, 0:-1]))
+                tmp.append(np.linalg.norm(item - node.neighbors[i, 0:-1]))
             dist = np.hstack((dist, np.array(tmp)))
             idx = np.argsort(np.array(dist))[0:min(self.k, dist.shape[0])]
             dist = dist[idx]

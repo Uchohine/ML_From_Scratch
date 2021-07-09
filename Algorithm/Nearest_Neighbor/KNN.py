@@ -21,7 +21,7 @@ class KNN():
             self.db = LSH(k=self.k).fit(x,y)
         if self.algorithm == 'KDTree':
             self.distance_measure = get_distance_measure('l2')
-            self.db = KDTree(self.k, self.distance_measure).fit(x,y)
+            self.db = KDTree(self.k).fit(x,y)
         if self.algorithm == 'BallTree':
             #although BallTree can use cos distance theoritically, but the projection calculation is based on l2 norm.
             #I will fix distance measurement on l2 until I find some reference if I can do cos.
@@ -60,7 +60,7 @@ if __name__ == '__main__':
     from sklearn.model_selection import train_test_split
 
     X_train, X_val, y_train, y_val = train_test_split(x, y, random_state=44)
-    model = KNN(k=15, distance_measure='l2', algorithm='BallTree')
+    model = KNN(k=15, distance_measure='cos', algorithm='LSH')
 
     model.fit(X_train, y_train)
 
@@ -75,7 +75,7 @@ if __name__ == '__main__':
     print(f'Accuracy for self built model {accuracy_score(y_val, y_pred)}')
 
     from sklearn.neighbors import KNeighborsClassifier
-    model = KNeighborsClassifier(n_neighbors=15,algorithm='ball_tree')
+    model = KNeighborsClassifier(n_neighbors=15, algorithm='ball_tree')
 
 
     model.fit(X_train, y_train)

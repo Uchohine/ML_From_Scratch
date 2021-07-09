@@ -58,7 +58,7 @@ class svm():
             res[neg] = self._predict(x[neg], node.left)
         if (pos == True).any():
             res[pos] = self._predict(x[pos], node.right)
-        return res
+        return res.astype('int')
 
     def predict(self, x):
         return self._predict(x, self.Node)

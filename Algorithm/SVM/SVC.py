@@ -61,7 +61,7 @@ class svc():
         return ypred + self.b
 
     def predict(self, x):
-        return np.sign(self.project(x))
+        return np.sign(self.project(x)).astype('int')
 
 
 if __name__ == '__main__':

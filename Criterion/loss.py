@@ -35,7 +35,7 @@ class MSE():
 
 class Deviance():
     def __init__(self):
-        self.name = 'devicance'
+        self.name = 'Deviance'
 
     def forward(self, y, ypred):
         return - np.sum(y * np.log(softmax(ypred)))
@@ -48,7 +48,7 @@ def Set_Loss(name='', **kwargs):
     switcher = {
         'CrossEntropy': CrossEntropy,
         'Deviance': Deviance,
-        'MSE':MSE
+        'MSE': MSE
     }
     res = switcher.get(name)
     if res == None:
