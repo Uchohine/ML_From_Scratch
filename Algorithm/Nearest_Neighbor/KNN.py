@@ -23,6 +23,9 @@ class KNN():
             self.distance_measure = get_distance_measure('l2')
             self.db = KDTree(self.k, self.distance_measure).fit(x,y)
         if self.algorithm == 'BallTree':
+            #although BallTree can use cos distance theoritically, but the projection calculation is based on l2 norm.
+            #I will fix distance measurement on l2 until I find some reference if I can do cos.
+            self.distance_measure = get_distance_measure('l2')
             self.db = BallTree(self.k, self.distance_measure).fit(x,y)
         if self.algorithm == 'BruteForce':
             if len(y.shape) != 2:
