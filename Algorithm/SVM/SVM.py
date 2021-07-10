@@ -66,14 +66,16 @@ class svm():
 
 
 if __name__ == '__main__':
-    data = load_wine()
-    x, y, col = data['data'], data['target'], data['feature_names']
+    import scipy.io
 
-    from sklearn.model_selection import train_test_split
+    mat = scipy.io.loadmat('mnist.mat')
+
+
+    X_train, X_val, y_train, y_val = mat['Xtr'].T.A, mat['Xte'].T.A, mat['ytr'], mat['yte']
+
 
     k = 'sigmoid'
 
-    X_train, X_val, y_train, y_val = train_test_split(x, y, random_state=44)
     model = svm(kernel=k)
 
     start = time.time()
@@ -94,7 +96,7 @@ if __name__ == '__main__':
 
     model = make_pipeline(StandardScaler(), SVC(kernel=k))
     start = time.time()
-    model.fit(X_train, y_train)
+    model.fit(X_train, y_train.squeeze())
     end = time.time()
     print('elapsed time : {:.5f}s'.format((end - start)))
     y_pred_ref = model.predict(X_val)

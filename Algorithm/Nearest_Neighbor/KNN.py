@@ -60,7 +60,7 @@ if __name__ == '__main__':
     from sklearn.model_selection import train_test_split
 
     X_train, X_val, y_train, y_val = train_test_split(x, y, random_state=44)
-    model = KNN(k=15, distance_measure='cos', algorithm='LSH')
+    model = KNN(k=15, distance_measure='cos', algorithm='BallTree')
 
     model.fit(X_train, y_train)
 
