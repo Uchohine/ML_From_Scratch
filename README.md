@@ -11,10 +11,11 @@ This is a repo where you can find complete machine learning algorithm implementa
 5. SVC with kernels (using cvxopt - a quadprog optimizatiion tool)
 6. SVR with kernels (using cvxopt)
 7. KNN (Ball tree, KD tree, LSH, brute force)
+8. Kmeans++
 
 ## Planning on:
 1. linear regression
-2. k means
+2. Gaussian Process
 3. logistic regression
 4. neural network
 5. convolution network
